@@ -108,6 +108,7 @@ class vLLMRollout(BaseRollout):
         trust_remote_code = kwargs.get('trust_remote_code', False)
         load_format = 'dummy' if config.load_format.startswith('dummy') else config.load_format
 
+        import os
         self.inference_engine = LLM(
             model=model_path,
             enable_sleep_mode=True,
@@ -126,6 +127,7 @@ class vLLMRollout(BaseRollout):
             enable_chunked_prefill=config.enable_chunked_prefill,
             enable_prefix_caching=True,
             trust_remote_code=trust_remote_code,
+            seed=int(os.getenv("RANK", "0")) // tensor_parallel_size,
         )
 
         # Offload vllm model to reduce peak memory usage
