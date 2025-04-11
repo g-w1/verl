@@ -21,6 +21,7 @@ import numpy as np
 from verl import DataProto
 from collections import Counter, defaultdict
 from functools import partial
+import datetime
 
 
 def reduce_metrics(metrics: Dict[str, List[Any]]) -> Dict[str, Any]:
@@ -290,3 +291,18 @@ def process_validation_metrics(data_sources: list[str],
                 data_src2var2metric2val[data_source][var_name][metric_name] = np.mean(prompt_vals)
 
     return data_src2var2metric2val
+
+def compute_custom_metrics(batch: DataProto) -> Dict[str, Any]:
+    """
+    Compute custom metrics for the PPO trainer. By Jacob
+    """
+    metrics = {}
+    extra_infos = batch.non_tensor_batch['extra_info']
+    dates_resolved = [datetime.date.fromisoformat(i['date_resolved']) for i in extra_infos]
+    latest_date_resolved = max(dates_resolved)
+    latest_datetime_resolved = datetime.datetime.combine(latest_date_resolved, datetime.time.min)
+    metrics['latest_date_resolved'] = latest_datetime_resolved.timestamp()
+    earliest_date_resolved = min(dates_resolved)
+    earliest_datetime_resolved = datetime.datetime.combine(earliest_date_resolved, datetime.time.min)
+    metrics['earliest_date_resolved'] = earliest_datetime_resolved.timestamp()
+    return metrics

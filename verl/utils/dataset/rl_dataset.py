@@ -89,9 +89,11 @@ class RLHFDataset(Dataset):
                  return_raw_chat: bool = False,
                  truncation: str = 'error',
                  filter_overlong_prompts: bool = False,
-                 num_workers: Optional[int] = None):
+                 num_workers: Optional[int] = None,
+                 include_extra_info: bool = False):
         if not isinstance(parquet_files, (List, ListConfig)):
             parquet_files = [parquet_files]
+
 
         self.parquet_files = copy.deepcopy(parquet_files)
         self.original_parquet_files = copy.deepcopy(parquet_files)  # use for resume
@@ -111,6 +113,7 @@ class RLHFDataset(Dataset):
             self.num_workers = max(1, os.cpu_count() // 4)
         else:
             self.num_workers = min(num_workers, os.cpu_count())
+        self.include_extra_info = include_extra_info
 
         # whether to store the dataset in state_dict()
         # default not store
@@ -224,6 +227,8 @@ class RLHFDataset(Dataset):
         # add index for each prompt
         index = row_dict.get("extra_info", {}).get("index", 0)
         row_dict["index"] = index
+        if self.include_extra_info:
+            row_dict["extra_info"] = row_dict.pop("extra_info")
 
         return row_dict
 
