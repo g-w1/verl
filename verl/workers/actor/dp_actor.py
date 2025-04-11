@@ -17,6 +17,7 @@ Single Process Actor
 
 import itertools
 from typing import Iterable, Tuple
+from tqdm import tqdm
 
 import torch
 from torch import nn
@@ -272,7 +273,7 @@ class DataParallelPPOActor(BasePPOActor):
 
                 self.actor_optimizer.zero_grad()
 
-                for data in micro_batches:
+                for data in tqdm(micro_batches, desc="Doing PPO update micro batch"):
                     # Support all hardwares
                     if isinstance(data, DataProto):
                         data = {**data.batch.to(torch.cuda.current_device()), **data.non_tensor_batch}

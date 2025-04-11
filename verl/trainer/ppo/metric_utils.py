@@ -118,6 +118,18 @@ def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> Dict[str,
             torch.max(response_length).detach().item(),
         'response_length/min':
             torch.min(response_length).detach().item(),
+        'response_length/median':
+            torch.median(response_length).detach().item(),
+        'response_length/std':
+            torch.std(response_length).detach().item(),
+        'response_length/95th_percentile':
+            torch.quantile(response_length, 0.95).detach().item(),
+        'response_length/5th_percentile':
+            torch.quantile(response_length, 0.05).detach().item(),
+        'response_length/75th_percentile':
+            torch.quantile(response_length, 0.75).detach().item(),
+        'response_length/25th_percentile':
+            torch.quantile(response_length, 0.25).detach().item(),
         'response_length/clip_ratio':
             torch.mean(torch.eq(response_length, max_response_length).float()).detach().item(),
         # prompt length
