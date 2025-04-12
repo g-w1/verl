@@ -170,14 +170,14 @@ class TaskRunner:
         compute_score = get_custom_reward_fn(config)
         reward_kwargs = dict(config.reward_model.get("reward_kwargs", {}))
         reward_fn = reward_manager_cls(tokenizer=tokenizer,
-                                       num_examine=0,
+                                       num_examine=config.reward_model.train_num_examine,
                                        compute_score=compute_score,
                                        reward_fn_key=config.data.reward_fn_key,
                                        **reward_kwargs)
 
         # Note that we always use function-based RM for validation
         val_reward_fn = reward_manager_cls(tokenizer=tokenizer,
-                                           num_examine=1,
+                                           num_examine=config.reward_model.val_num_examine,
                                            compute_score=compute_score,
                                            reward_fn_key=config.data.reward_fn_key)
         resource_pool_manager = ResourcePoolManager(resource_pool_spec=resource_pool_spec, mapping=mapping)

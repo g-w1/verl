@@ -33,6 +33,7 @@ import numpy as np
 from codetiming import Timer
 from omegaconf import OmegaConf, open_dict
 from verl import DataProto
+from verl.utils.pg_logging import create_supabase_client, add_experiment_to_supabase, add_step
 from verl.protocol import pad_dataproto_to_divisor, unpad_dataproto
 from verl.single_controller.base import Worker
 from verl.single_controller.ray import RayResourcePool, RayWorkerGroup, RayClassWithInitArgs
@@ -294,6 +295,12 @@ class RayPPOTrainer(object):
 
         self._validate_config()
         self._create_dataloader()
+
+        if self.config.trainer.do_supabase_logging:
+            self.supabase = create_supabase_client()
+            self.experiment_uuid = str(uuid.uuid4())
+            self.config.experiment_uuid = self.experiment_uuid
+            add_experiment_to_supabase(self.supabase, self.experiment_uuid)
 
     def _validate_config(self):
         config = self.config
@@ -589,7 +596,7 @@ class RayPPOTrainer(object):
 
         data_sources = np.concatenate(data_source_lst, axis=0)
 
-        data_src2var2metric2val = process_validation_metrics(data_sources, sample_inputs, reward_extra_infos_dict)
+        data_src2var2metric2val = process_validation_metrics(self, data_sources, sample_inputs, reward_extra_infos_dict)
         metric_dict = {}
         for data_source, var2metric2val in data_src2var2metric2val.items():
             core_var = "acc" if "acc" in var2metric2val else "reward"
@@ -984,7 +991,7 @@ class RayPPOTrainer(object):
                 n_gpus = self.resource_pool_manager.get_n_gpus()
                 metrics.update(compute_throughout_metrics(batch=batch, timing_raw=timing_raw, n_gpus=n_gpus))
                 # custom metrics put in by Jacob
-                metrics.update(compute_custom_metrics(batch=batch))
+                metrics.update(compute_custom_metrics(trainer=self, batch=batch, reward_extra_infos_dict=reward_extra_infos_dict))
 
                 # TODO: make a canonical logger that supports various backend
                 logger.log(data=metrics, step=self.global_steps)

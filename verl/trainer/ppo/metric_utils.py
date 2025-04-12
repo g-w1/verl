@@ -23,6 +23,8 @@ from collections import Counter, defaultdict
 from functools import partial
 import datetime
 
+from verl.utils.pg_logging import add_step
+
 
 def reduce_metrics(metrics: Dict[str, List[Any]]) -> Dict[str, Any]:
     for key, val in metrics.items():
@@ -215,7 +217,7 @@ def calc_maj_val(data: list[dict[str, Any]], vote_key: str, val_key: str) -> flo
     return maj_val
 
 
-def process_validation_metrics(data_sources: list[str],
+def process_validation_metrics(trainer, data_sources: list[str],
                                sample_inputs: list[str],
                                infos_dict: dict[str, list[Any]],
                                seed: int = 42) -> dict[str, dict[str, dict[str, float]]]:
@@ -229,6 +231,12 @@ def process_validation_metrics(data_sources: list[str],
     Returns:
         dict[str, dict[str, dict[str, float]]]: data source -> variable name -> metric value
     """
+
+    if trainer.config.trainer.do_supabase_logging:
+        prompt_groups = reward_extra_infos_dict_to_prompt_groups(infos_dict)
+        print("doing supabase logging for a validation step")
+        add_step(trainer.supabase, trainer.config.experiment_uuid, prompt_groups, trainer.global_steps, False)
+
     # Group metrics by data source, prompt and variable
     data_src2prompt2var2vals = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
     for sample_idx, data_source in enumerate(data_sources):
@@ -292,7 +300,16 @@ def process_validation_metrics(data_sources: list[str],
 
     return data_src2var2metric2val
 
-def compute_custom_metrics(batch: DataProto) -> Dict[str, Any]:
+def reward_extra_infos_dict_to_prompt_groups(reward_extra_infos_dict: dict[str, Any]) -> dict[str, dict[str, list[Any]]]:
+    samples = list(zip(*[reward_extra_infos_dict[k] for k in reward_extra_infos_dict.keys()]))
+    prompt_groups = defaultdict(lambda: defaultdict(list))
+    for sample in samples:
+        sample_dict = {k: v for k, v in zip(reward_extra_infos_dict.keys(), sample)}
+        for key, val in sample_dict.items():
+            prompt_groups[sample_dict['prompt_str']][key].append(val)
+    return prompt_groups
+
+def compute_custom_metrics(trainer, batch: DataProto, reward_extra_infos_dict: dict[str, Any]) -> Dict[str, Any]:
     """
     Compute custom metrics for the PPO trainer. By Jacob
     """
@@ -305,4 +322,19 @@ def compute_custom_metrics(batch: DataProto) -> Dict[str, Any]:
     earliest_date_resolved = min(dates_resolved)
     earliest_datetime_resolved = datetime.datetime.combine(earliest_date_resolved, datetime.time.min)
     metrics['earliest_date_resolved'] = earliest_datetime_resolved.timestamp()
+
+    # Create list of tuples with all metrics for each sample
+    samples = list(zip(*[reward_extra_infos_dict[k] for k in ['score', 'loss', 'answer', 'prompt_str', 'response_str']]))
+    
+    # Group by prompt string
+    prompt_groups = reward_extra_infos_dict_to_prompt_groups(reward_extra_infos_dict)
+    std_answers = []
+    for prompt_group in prompt_groups.values():
+        std_answers.append(np.std(prompt_group['answer']))
+    
+    if trainer.config.trainer.do_supabase_logging:
+        print("doing supabase logging for a train step")
+        add_step(trainer.supabase, trainer.config.experiment_uuid, prompt_groups, trainer.global_steps, True)
+    
+    metrics['mean_std_in_answers'] = np.mean(std_answers)
     return metrics

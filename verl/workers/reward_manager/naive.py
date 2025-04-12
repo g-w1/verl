@@ -89,6 +89,7 @@ class NaiveRewardManager:
 
             if already_print_data_sources[data_source] < self.num_examine:
                 already_print_data_sources[data_source] += 1
+                print('='*100)
                 print("[prompt]", prompt_str)
                 print("[response]", response_str)
                 print("[ground_truth]", ground_truth)
@@ -97,6 +98,9 @@ class NaiveRewardManager:
                         print(f"[{key}]", value)
                 else:
                     print(f"[score]", score)
+            reward_extra_info['prompt_str'].append(prompt_str)
+            reward_extra_info['response_str'].append(response_str)
+                
 
         if return_dict:
             return {
