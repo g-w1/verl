@@ -271,6 +271,7 @@ class RayPPOTrainer(object):
         if self.hybrid_engine:
             assert Role.ActorRollout in role_worker_mapping, f'{role_worker_mapping.keys()=}'
 
+        self.no_train = config.trainer.no_train
         self.role_worker_mapping = role_worker_mapping
         self.resource_pool_manager = resource_pool_manager
         self.use_reference_policy = Role.RefPolicy in role_worker_mapping
@@ -963,7 +964,7 @@ class RayPPOTrainer(object):
                         metrics.update(critic_output_metrics)
 
                     # implement critic warmup
-                    if self.config.trainer.critic_warmup <= self.global_steps:
+                    if self.config.trainer.critic_warmup <= self.global_steps and not self.no_train:
                         # update actor
                         with _timer('update_actor', timing_raw):
                             actor_output = self.actor_rollout_wg.update_actor(batch)

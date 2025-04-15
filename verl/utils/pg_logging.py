@@ -31,5 +31,6 @@ def add_step(client: Client, experiment_uuid: str, step_results: dict, global_st
             "global_step": global_step
         }).execute()
     except Exception as e:
+        print(step_results)
         print('=' * 100, "Error adding step to supabase", e, '=' * 100)
         raise e
