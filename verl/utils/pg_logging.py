@@ -4,13 +4,14 @@ import os
 import uuid
 import dotenv
 from supabase import create_client, Client
+from supabase.client import ClientOptions
 
 dotenv.load_dotenv(override=True, dotenv_path="../../.env")
 
 def create_supabase_client() -> Client:
     url: str = os.environ.get("SUPABASE_URL")
     key: str = os.environ.get("SUPABASE_KEY")
-    supabase: Client = create_client(url, key)
+    supabase: Client = create_client(url, key, options=ClientOptions(postgrest_client_timeout=5000, storage_client_timeout=5000))
     return supabase
 def add_experiment_to_supabase(client: Client, experiment_uuid: str):
     try:
